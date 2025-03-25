@@ -11,11 +11,6 @@ def main():
     if len(sys.argv) != 2:
         sys.exit("Usage: python pagerank.py corpus")
     corpus = crawl(sys.argv[1])
-    print("\nStart main args:")
-    print(corpus)
-    print(DAMPING)
-    print(SAMPLES)
-    print("End main args\n")
     ranks = sample_pagerank(corpus, DAMPING, SAMPLES)
     print(f"PageRank Results from Sampling (n = {SAMPLES})")
     for page in sorted(ranks):
@@ -67,27 +62,24 @@ def transition_model(corpus, page, damping_factor):
     
     # 4. If page has no links, distribute probability evenly among all pages
     #    - Each page gets probability 1/N where N is total number of pages
-    
-    N = len(corpus)
-
-    if len(links) == 0:
-        probability = 1 / N
-        for pg in corpus:
-            distribution[pg] = probability
-
     # 5. Otherwise, calculate probabilities:
     #    - With probability (1 - damping_factor), randomly choose any page
     #      - Each page gets (1 - damping_factor)/N probability
     #    - With probability damping_factor, choose from linked pages
     #      - Each linked page gets damping_factor/L probability where L is number of links
+    N = len(corpus)
+    LINKS_LEN = len(links)
+
+    if LINKS_LEN == 0:
+        probability = 1 / N
+        for pg in corpus:
+            distribution[pg] = probability
     else:
         probability = (1 - damping_factor) / N
         for pg in corpus:
             if pg in links:
-                probability += damping_factor / len(links)
+                probability += damping_factor / LINKS_LEN
             distribution[pg] = probability
-
-    
     # 6. Return dictionary mapping page names to probabilities
     return distribution
 
@@ -112,38 +104,20 @@ def sample_pagerank(corpus, damping_factor, n):
     #    - Use transition_model to get probability distribution for current page
     #    - Choose next page based on probability distribution
     #    - Increment counter for chosen page
-
+    for i in range(n):
+        probability_dict = transition_model(corpus, page, damping_factor)
+        next_page = random.choices(list(probability_dict.keys()), weights=list(probability_dict.values()), k=1)[0]
+        visits[next_page] += 1
+        page = next_page
     # 4. Convert counts to probabilities:
     #    - Divide each count by n to get probability
     #    - Ensure probabilities sum to 1
+    for page in visits:
+        visits[page] = visits[page] / n
 
-    probability_check = 0
-
-    print("\nStart sample_pagerank:")
-    print("page: ", page)
-    print("corpus: ", corpus)
-    print("N: ", N)
-    probability_dict = transition_model(corpus, page, damping_factor)
-    print("probability_dict: ", probability_dict)
-    
-    for i in range(N):
-        next_page = random.choices(list(probability_dict.keys()), weights=list(probability_dict.values()), k=1)[0]
-        visits[next_page] += 1
-        probability = visits[next_page] / (i + 1)
-        probability /= N
-        probability_check += probability
-        print("\tStart i: ", i)
-        print("\tnext_page: ", next_page)
-        print("\tnext_page visits: ", visits[next_page])
-        print("\tprobability: ", probability)
-        print("\tprobability_check: ", probability_check)
-        print("\tEnd i: ", i)
-    
-    if probability_check != 1:
-        raise ValueError("Probability check - values do not sum to 1. \t Value: ", probability_check)
-
-    print("Visits: ", visits)
-    print("End sample_pagerank\n")
+    probability_sum = sum(visits.values())
+    if abs(probability_sum - 1.0) > 0.001:
+        raise ValueError(f"Probability check - values do not sum to 1. Value: {probability_sum}")
     
     # 5. Return dictionary mapping page names to PageRank values
     return visits
