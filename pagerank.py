@@ -70,7 +70,7 @@ def transition_model(corpus, page, damping_factor):
     
     N = len(corpus)
 
-    if links.__len__ == 0:
+    if len(links) == 0:
         probability = 1 / N
         for pg in corpus:
             distribution[pg] = probability
@@ -84,7 +84,7 @@ def transition_model(corpus, page, damping_factor):
         probability = (1 - damping_factor) / N
         for pg in corpus:
             if pg in links:
-                probability += damping_factor / links.__len__
+                probability += damping_factor / len(links)
             distribution[pg] = probability
 
     
@@ -100,6 +100,10 @@ def sample_pagerank(corpus, damping_factor, n):
 
     # 1. Initialize a dictionary to count visits to each page
     visits = {}
+
+    for page in corpus.keys():
+        visits[page] = 0
+
     # 2. Choose a random page to start
     rand = random.randint(0, N - 1)
     page = list(corpus.keys())[rand]
@@ -119,11 +123,13 @@ def sample_pagerank(corpus, damping_factor, n):
     print("page: ", page)
     print("corpus: ", corpus)
     print("N: ", N)
+    probability_dict = transition_model(corpus, page, damping_factor)
+    print("probability_dict: ", probability_dict)
     
     for i in range(N):
-        probability = transition_model(corpus, page, damping_factor)
-        next_page = random.choices(list(probability.keys()), weights=list(probability.values()), k=1)[0]
+        next_page = random.choices(list(probability_dict.keys()), weights=list(probability_dict.values()), k=1)[0]
         visits[next_page] += 1
+        probability = visits[next_page] / (i + 1)
         probability /= N
         probability_check += probability
         print("\tStart i: ", i)
